@@ -9,8 +9,8 @@ import re
 app = FastAPI()
 
 # Load data at startup
-tc_data = load_tc_data("/work/LG/heytan_test_case_data.xlsx")
-api_data = load_api_data("/work/LG/2025/data/mapped_data.jsonl")
+tc_data = load_tc_data("./data/heytan_test_case_data.xlsx")
+api_data = load_api_data("./data/mapped_data.jsonl")
 
 class TCInput(BaseModel):
     precondition: str
@@ -34,25 +34,6 @@ def api_generate_action_desc(input: GenInput):
     generated = generate_action_description(input.current_tc, input.examples)
     return {"generated_action_desc": generated}
 
-# @app.post("/retrieve_api")
-# def api_retrieve_api(input: ActionDescInput):
-#     results = retrieve_api(input.action_desc, api_data) 
-#     return {"retrieved_apis": results}
-
-# @app.post("/retrieve_api")
-# def api_retrieve_api(input: ActionDescInput):
-#     lines = re.split(r"\n|\d+\.\s*", input.action_desc.strip())
-#     lines = [line.strip() for line in lines if line.strip()]
-
-#     matched = []
-#     for line in lines:
-#         apis = retrieve_api(line, api_data)
-#         matched.append({
-#             "action_desc": line,
-#             "matched_apis": apis
-#         })
-
-#     return {"matched": matched}
 @app.post("/retrieve_api")
 def api_retrieve_api(input: ActionDescInput):
     lines = re.split(r"\n|\d+\.\s*", input.action_desc.strip())
