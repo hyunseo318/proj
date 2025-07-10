@@ -11,7 +11,6 @@ API_ENCODER_PATH = "/work/LG/2025/output/api_encoder.pth"
 MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
 # 모델 정의 (Dual Encoder 구조 재사용)
 class DualEncoder(nn.Module):
     def __init__(self, model_name):
@@ -48,29 +47,53 @@ def encode_api(text: str) -> np.ndarray:
         emb = api_encoder(input_ids, attention_mask)
     return emb.cpu().numpy()[0]
 
-# Load and filter API data
-with open("/work/LG/2025/data/mapped_data.jsonl", "r", encoding="utf-8") as f:
-    raw_data = [json.loads(line) for line in f]
-
-api_data = [item for item in raw_data if "action_api" in item and isinstance(item["action_api"], str) and item["action_api"].strip()]
-action_api_texts = [item["action_api"] for item in api_data]
-action_api_vecs = np.stack([encode_api(text) for text in action_api_texts])  # shape: (N, D)
-
 # def retrieve_api(action_desc: str, api_data: list, top_k=3):
 #     query_vec = encode_desc(action_desc)
 #     api_vecs = []
 #     for api in api_data:
-#         api_text = api.get("action_api", "")
+#         # api_text = api.get("api_name", "")
+#         api_text = api.get("action_api", "")  
+#         if not api_text.strip():  
+#             continue
 #         api_vecs.append(encode_api(api_text))
 #     api_vecs = np.stack(api_vecs)
 
 #     sims = api_vecs @ query_vec  # cosine similarity
 #     topk_idx = np.argsort(sims)[::-1][:top_k]
 
-#     return [api_data[i] for i in topk_idx]
+#     valid_data = [api for api in api_data if api.get("action_api", "").strip()]
+#     return [valid_data[i] for i in topk_idx]
+#     # return [api_data[i] for i in topk_idx]
 
+
+# ✅ API 데이터 로드 + 유니크 필터링 + 사전 임베딩
+with open("/work/LG/2025/data/mapped_data.jsonl", "r", encoding="utf-8") as f:
+    raw_data = [json.loads(line) for line in f]
+
+api_data = []
+action_api_texts = []
+seen = set()
+
+for item in raw_data:
+    api = item.get("action_api")
+    if not isinstance(api, str):
+        continue  # None, 숫자, 리스트 등은 제외
+    api = api.strip()
+    if not api or api in seen:
+        continue  # 빈 문자열 or 중복 제거
+    seen.add(api)
+    api_data.append({
+        "action_api": api,
+        "description": item.get("action_description", "")
+    })
+    action_api_texts.append(api)
+
+# ✅ 사전 임베딩된 API 벡터
+action_api_vecs = np.stack([encode_api(text) for text in action_api_texts])  # shape: (N, D)
+
+# ✅ 검색 함수
 def retrieve_api(action_desc: str, top_k=10):
     query_vec = encode_desc(action_desc)  # shape: (D,)
-    sims = action_api_vecs @ query_vec  # shape: (N,)
+    sims = action_api_vecs @ query_vec    # cosine similarity
     top_idx = np.argsort(sims)[::-1][:top_k]
     return [api_data[i] for i in top_idx]
