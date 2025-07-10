@@ -39,22 +39,35 @@ if st.button("🚀 Run"):
         # # 3. API 검색
         # with st.spinner("🔌 API 추천 중..."):
         #     api_res = requests.post("http://localhost:8000/retrieve_api", json={"action_desc": action_desc}).json()
-        #     matches = api_res["matched"]
+        #     matches = api_res["sequence"]
 
         #     st.subheader("3️⃣ Retrieved APIs")
 
         #     for i, match in enumerate(matches):
         #         st.markdown(f"**{i+1}. `{match['action_desc']}`**")
-        #         for j, api in enumerate(match["matched_apis"]):
-        #             st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;- `{api['api_name']}`")
+        #         # for j, api in enumerate(match["matched_apis"]):
+        #         #     st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;- `{api['action_api']}`")
+        #         st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;- `{match['matched_api']}`")
 
 
-        # 3. API 검색
-        with st.spinner("🔌 API 추천 중..."):
-            api_res = requests.post("http://localhost:8000/retrieve_api", json={"action_desc": action_desc}).json()
-            matches = api_res["sequence"]  
 
-            st.subheader("3️⃣ Matched API Sequence")
+        # 3-1. Top-k API 검색
+        with st.spinner("🔌 Top-k API 추천 중..."):
+            api_res = requests.post("http://localhost:8000/retrieve_topk_api", json={"action_desc": action_desc}).json()
+            matches = api_res["matched"]
 
+            st.subheader("3️⃣ Top-k APIs per Action Step")
             for i, match in enumerate(matches):
-                st.markdown(f"**{i+1}. `{match['action_desc']}`** → `{match['matched_api']}`")  
+                st.markdown(f"**{i+1}. `{match['action_desc']}`**")
+                for j, api in enumerate(match["matched_apis"]):
+                    st.markdown(f"&nbsp;&nbsp;&nbsp;&nbsp;- `{api}`")
+
+        # 3-2. Top-1 API 선택
+        with st.spinner("🎯 최종 API 시퀀스 정리 중..."):
+            top1_res = requests.post("http://localhost:8000/retrieve_top1_api", json={"action_desc": action_desc}).json()
+            sequence = top1_res["sequence"]
+
+            st.subheader("4️⃣ Final API Call Sequence")
+            for i, item in enumerate(sequence):
+                st.markdown(f"**{i+1}. `{item['action_desc']}`** → `{item['matched_api']}`")
+
